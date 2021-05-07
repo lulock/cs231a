@@ -135,7 +135,41 @@ Returns:
 '''
 def carve(voxels, camera):
     # TODO: Implement this method!
-    raise Exception('Not Implemented Error')
+    h,w = camera.silhouette.shape
+    print(f'h,w is {h,w}')
+    ones = np.ones((voxels.shape[0], 1))
+    voxels_ext = np.append(voxels,ones, axis=1)
+    print(f'voxels_ext is {voxels_ext.shape}')
+    
+    # project from 3D to 2D
+    uvs = camera.P@voxels_ext.T
+
+    # normalise
+    uvs /= uvs[2,:]
+
+    # is voxel within the bounds of image?
+    within_x = np.logical_and(uvs[0, :] >= 0, uvs[0, :] < w)
+    within_y = np.logical_and(uvs[1, :] >= 0, uvs[1, :] < h)
+
+    within_frame = np.logical_and(within_x, within_y)
+    
+    # store in frame voxel indices
+    idx = np.where(within_frame)[0]
+
+    # drop z 
+    sub_uvs = uvs[:2, idx]
+
+    # type as int - to be used as indices
+    sub_uvs = sub_uvs.astype(int)
+    
+    # resulting voxels where silhouette is 1
+    results = (camera.silhouette[sub_uvs[1, :], sub_uvs[0, :]]==1)
+    
+    # only consider these voxels colliding with silhouettes from results above
+    idx = idx[results]
+    
+    return voxels[idx,:]
+    # raise Exception('Not Implemented Error')
 
 
 '''
