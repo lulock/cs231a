@@ -115,7 +115,21 @@ def get_voxel_bounds(cameras, estimate_better_bounds = False, num_voxels = 4000)
 
     if estimate_better_bounds:
         # TODO: Implement this method!
-        raise Exception('Not Implemented Error')
+        # perform quick carving
+        # This part is simply to test forming the initial voxel grid
+        voxels, voxel_size = form_initial_voxels(xlim, ylim, zlim, num_voxels)
+        plot_surface(voxels)
+
+        # Result after all carvings
+        # print(len(cameras))
+        for c in cameras:
+            voxels = carve(voxels, c)
+        
+        # use this single voxel as potential better bounds. Add 1.5 units on either side.
+        xlim = [voxels[:,0]- 1.5*voxel_size, voxels[:,0]+1.5*voxel_size]
+        ylim = [voxels[:,1]- 1.5*voxel_size, voxels[:,1]+1.5*voxel_size]
+        zlim = [voxels[:,2]- 1.5*voxel_size, voxels[:,2]+1.5*voxel_size]
+        # raise Exception('Not Implemented Error')
     return xlim, ylim, zlim
     
 
@@ -136,10 +150,9 @@ Returns:
 def carve(voxels, camera):
     # TODO: Implement this method!
     h,w = camera.silhouette.shape
-    print(f'h,w is {h,w}')
+    
     ones = np.ones((voxels.shape[0], 1))
-    voxels_ext = np.append(voxels,ones, axis=1)
-    print(f'voxels_ext is {voxels_ext.shape}')
+    voxels_ext = np.append(voxels,ones, axis=1)    
     
     # project from 3D to 2D
     uvs = camera.P@voxels_ext.T
@@ -167,7 +180,7 @@ def carve(voxels, camera):
     
     # only consider these voxels colliding with silhouettes from results above
     idx = idx[results]
-    
+
     return voxels[idx,:]
     # raise Exception('Not Implemented Error')
 
@@ -190,7 +203,7 @@ def estimate_silhouette(im):
 
 
 if __name__ == '__main__':
-    estimate_better_bounds = False
+    estimate_better_bounds = True
     use_true_silhouette = True
     frames = sio.loadmat('frames.mat')['frames'][0]
     cameras = [Camera(x) for x in frames]
@@ -229,4 +242,6 @@ if __name__ == '__main__':
     # Result after all carvings
     for c in cameras:
         voxels = carve(voxels, c)  
+    print(voxels)
+    print(voxel_size)
     plot_surface(voxels, voxel_size)
