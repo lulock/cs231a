@@ -1,3 +1,8 @@
+''' 
+camera.py file provided by Stanford University as a part of problem set 3 for the course Computer Vision, From 3D Reconstruction to Recognition.
+https://web.stanford.edu/class/cs231a/syllabus.html
+
+'''
 import numpy as np
 
 class Camera:

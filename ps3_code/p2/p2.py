@@ -1,9 +1,19 @@
+'''
+Problem Set 3 for Stanford University's course Computer Vision, From 3D Reconstruction to Recognition: https://web.stanford.edu/class/cs231a/syllabus.html
+
+Adapted from the starter code provided by the university. 
+- Implemented: carve() and form_initial_voxels()
+- extended get_voxel_bounds(),
+- and modified main().
+
+'''
+
 import numpy as np
 import scipy.io as sio
 import argparse
 from camera import Camera
-from plotting import *
-
+# make sure to pip install open3d for visualisations : http://www.open3d.org/docs/release/getting_started.html
+import open3d as o3d
 
 # A very simple, but useful method to take the difference between the
 # first and second element (usually for 2D vectors)
@@ -50,8 +60,10 @@ def form_initial_voxels(xlim, ylim, zlim, num_voxels):
     total_volume = x*y*z
     voxel_volume = total_volume/num_voxels
     
+    # find side length of one voxel
     voxel_size = voxel_volume**(1/3)
     
+    # find number of voxels per dim
     unit_num_voxels = int(num_voxels**(1/3))
 
     xloc = np.linspace(xlim[0], xlim[0]+(unit_num_voxels*voxel_size), unit_num_voxels)
@@ -59,10 +71,7 @@ def form_initial_voxels(xlim, ylim, zlim, num_voxels):
     zloc = np.linspace(zlim[0], zlim[0]+(unit_num_voxels*voxel_size), unit_num_voxels)
 
     xv,yv,zv = np.meshgrid(xloc,yloc,zloc)
-    # print(f"xv is {xv.flatten().shape}")
-    # print(f"xv is {unit_num_voxels}")
     voxels = np.vstack((xv.flatten(), yv.flatten(), zv.flatten())).T
-    # print(f"voxels is {voxels.shape}")
     return voxels, voxel_size
 
 
@@ -118,7 +127,6 @@ def get_voxel_bounds(cameras, estimate_better_bounds = False, num_voxels = 4000)
         # perform quick carving
         # This part is simply to test forming the initial voxel grid
         voxels, voxel_size = form_initial_voxels(xlim, ylim, zlim, num_voxels)
-        plot_surface(voxels)
 
         # Result after all carvings
         # print(len(cameras))
@@ -205,11 +213,27 @@ def estimate_silhouette(im):
 if __name__ == '__main__':
     estimate_better_bounds = True
     use_true_silhouette = True
+
+    # load image data, silhouettes, and intrinsic matrices.
     frames = sio.loadmat('frames.mat')['frames'][0]
+    
+    # show sample images
     cameras = [Camera(x) for x in frames]
+    fig, axs = plt.subplots(1, 2, figsize=(10, 3))
+    plt.suptitle('Sample views of images from dataset')
+    for i, ax in enumerate(axs):
+        ax.imshow(cameras[i].image)
+    plt.show()
+
+    fig, axs = plt.subplots(1, 2, figsize=(10, 3))
+    plt.suptitle('Sample silhouettes from dataset')
+    for i, ax in enumerate(axs):
+        ax.imshow(cameras[i].silhouette)
+    plt.show()
 
     # Generate the silhouettes based on a color heuristic
-    if not use_true_silhouette:
+    # TODO: test other heuristics
+    if not use_true_silhouette: # test true silhouettes be passed as input?
         for i, c in enumerate(cameras):
             c.true_silhouette = c.silhouette
             c.silhouette = estimate_silhouette(c.image)
@@ -229,19 +253,19 @@ if __name__ == '__main__':
     num_voxels = 6e6
     xlim, ylim, zlim = get_voxel_bounds(cameras, estimate_better_bounds)
 
-    # This part is simply to test forming the initial voxel grid
-    voxels, voxel_size = form_initial_voxels(xlim, ylim, zlim, 4000)
-    plot_surface(voxels)
+    # Form the initial voxel grid
     voxels, voxel_size = form_initial_voxels(xlim, ylim, zlim, num_voxels)
 
     # Test the initial carving
-    voxels = carve(voxels, cameras[0])
-    if use_true_silhouette:
-        plot_surface(voxels)
+    # voxels = carve(voxels, cameras[0])
 
     # Result after all carvings
     for c in cameras:
         voxels = carve(voxels, c)  
-    print(voxels)
-    print(voxel_size)
-    plot_surface(voxels, voxel_size)
+
+    point_cloud= np.array(voxels)
+    pcd = o3d.geometry.PointCloud()
+    pcd.points = o3d.utility.Vector3dVector(point_cloud)
+    o3d.visualization.draw_geometries([pcd], width=960, height=540)   
+
+    # TODO: refine and save mesh 
